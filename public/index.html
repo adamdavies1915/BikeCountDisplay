@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lafitte Greenway Bike Counter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 50%, #1a472a 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      padding: 2rem;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 0.5rem;
+    }
+
+    .header .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    .counts {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      margin: 3rem 0;
+    }
+
+    .count-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 2rem;
+      padding: 2.5rem 4rem;
+      min-width: 300px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .count-card:hover {
+      transform: scale(1.02);
+    }
+
+    .count-label {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+      opacity: 0.9;
+    }
+
+    .count-number {
+      font-size: clamp(4rem, 12vw, 8rem);
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    }
+
+    .count-number.loading {
+      opacity: 0.5;
+    }
+
+    .count-date {
+      font-size: clamp(0.9rem, 2vw, 1.2rem);
+      margin-top: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .bike-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .logos {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 3rem;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      height: clamp(60px, 10vw, 100px);
+      width: auto;
+      transition: opacity 0.3s ease;
+    }
+
+    .status {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-size: 0.8rem;
+      opacity: 0.5;
+    }
+
+    .status.error {
+      color: #ff6b6b;
+      opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+      .counts {
+        gap: 1.5rem;
+      }
+
+      .count-card {
+        padding: 2rem 3rem;
+        min-width: 250px;
+      }
+
+      .logos {
+        gap: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Lafitte Greenway</h1>
+      <p class="subtitle">Bike & Pedestrian Counter</p>
+    </header>
+
+    <div class="counts">
+      <div class="count-card">
+        <div class="bike-icon">&#x1F6B2;</div>
+        <div class="count-label">Yesterday</div>
+        <div class="count-number" id="yesterday-count">--</div>
+        <div class="count-date" id="yesterday-date"></div>
+      </div>
+
+      <div class="count-card">
+        <div class="bike-icon">&#x1F6B4;</div>
+        <div class="count-label" id="ytd-label">2025 So Far</div>
+        <div class="count-number" id="ytd-count">--</div>
+        <div class="count-date">Year to date</div>
+      </div>
+    </div>
+
+    <div class="logos">
+      <img src="/logos/bayou-bikes.svg" alt="Bayou Bikes" class="logo" id="logo-bayou">
+      <img src="/logos/bike-easy.png" alt="Bike Easy" class="logo" id="logo-bike-easy">
+    </div>
+  </div>
+
+  <div class="status" id="status">Last updated: --</div>
+
+  <script>
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+    function formatNumber(num) {
+      return num.toLocaleString();
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    function formatYesterdayDate(dateStr) {
+      // dateStr is MM/DD/YYYY
+      const [month, day, year] = dateStr.split('/');
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    async function fetchCounts() {
+      const yesterdayEl = document.getElementById('yesterday-count');
+      const ytdEl = document.getElementById('ytd-count');
+      const ytdLabelEl = document.getElementById('ytd-label');
+      const yesterdayDateEl = document.getElementById('yesterday-date');
+      const statusEl = document.getElementById('status');
+
+      try {
+        yesterdayEl.classList.add('loading');
+        ytdEl.classList.add('loading');
+
+        const response = await fetch('/api/counts');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch counts');
+        }
+
+        const data = await response.json();
+
+        yesterdayEl.textContent = formatNumber(data.yesterday);
+        ytdEl.textContent = formatNumber(data.yearToDate);
+        ytdLabelEl.textContent = `${data.year} So Far`;
+        yesterdayDateEl.textContent = formatYesterdayDate(data.yesterdayDate);
+
+        statusEl.textContent = `Last updated: ${formatTime(data.fetchedAt)}`;
+        statusEl.classList.remove('error');
+
+        yesterdayEl.classList.remove('loading');
+        ytdEl.classList.remove('loading');
+
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+        statusEl.textContent = 'Error fetching data - retrying...';
+        statusEl.classList.add('error');
+      }
+    }
+
+    // Initial fetch
+    fetchCounts();
+
+    // Refresh periodically
+    setInterval(fetchCounts, REFRESH_INTERVAL);
+
+    // Also refresh on visibility change (when tab becomes visible again)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        fetchCounts();
+      }
+    });
+  </script>
+</body>
+</html>

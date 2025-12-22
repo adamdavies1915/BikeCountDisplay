@@ -1,0 +1,13 @@
+{
+  "name": "bike-count-display",
+  "version": "1.0.0",
+  "description": "Lafitte Greenway bike counter display for Bayou Bikes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
