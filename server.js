@@ -97,6 +97,11 @@ app.get('/api/counts', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
