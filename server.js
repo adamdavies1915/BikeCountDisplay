@@ -3,7 +3,7 @@ const https = require('https');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3333;
 
 // Lafitte Greenway counter config
 const COUNTER = {
@@ -49,7 +49,6 @@ function getYesterday() {
 // API endpoint to get bike counts
 app.get('/api/counts', async (req, res) => {
   try {
-    const yesterday = getYesterday();
     const currentYear = new Date().getFullYear();
     const flowIdsEncoded = COUNTER.flowIds.replace(/;/g, '%3B');
 
@@ -59,26 +58,26 @@ app.get('/api/counts', async (req, res) => {
     const data = await fetchEcoVisio(url);
 
     // Data format is [["MM/DD/YYYY", "count"], ...]
-    const yesterdayStr = formatDate(yesterday);
-
     let yesterdayCount = 0;
+    let yesterdayDate = '';
     let yearToDateCount = 0;
 
-    if (data && Array.isArray(data)) {
-      for (const entry of data) {
+    if (data && Array.isArray(data) && data.length >= 2) {
+      // Last entry is today (incomplete), second-to-last is the most recent complete day
+      const lastCompleteDay = data[data.length - 2];
+      if (Array.isArray(lastCompleteDay) && lastCompleteDay.length >= 2) {
+        yesterdayDate = lastCompleteDay[0];
+        yesterdayCount = parseInt(lastCompleteDay[1]) || 0;
+      }
+
+      // Sum up year to date (exclude today's incomplete data)
+      for (let i = 0; i < data.length - 1; i++) {
+        const entry = data[i];
         if (Array.isArray(entry) && entry.length >= 2) {
           const [date, count] = entry;
-          const countNum = parseInt(count) || 0;
-
-          // Check if this is yesterday
-          if (date === yesterdayStr) {
-            yesterdayCount = countNum;
-          }
-
-          // Check if this date is in the current year
           const year = parseInt(date.split('/')[2]);
           if (year === currentYear) {
-            yearToDateCount += countNum;
+            yearToDateCount += parseInt(count) || 0;
           }
         }
       }
@@ -87,7 +86,7 @@ app.get('/api/counts', async (req, res) => {
     res.json({
       yesterday: yesterdayCount,
       yearToDate: yearToDateCount,
-      yesterdayDate: yesterdayStr,
+      yesterdayDate: yesterdayDate,
       year: currentYear,
       fetchedAt: new Date().toISOString()
     });
