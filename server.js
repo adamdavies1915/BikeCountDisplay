@@ -3,7 +3,7 @@ const https = require('https');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3333;
+const PORT = process.env.PORT || 3000;
 
 // Lafitte Greenway counter config
 const COUNTER = {
